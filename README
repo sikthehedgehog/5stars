@@ -1,0 +1,27 @@
+QUICK README OF DOOM™
+
+How to build: first of all you'll need these tools:
+
+   - asm68k
+   - mdtiler (see http://tools.mdscene.net)
+   - slz (see http://tools.mdscene.net)
+
+Letting you find out where to get asm68k on your own (it's the PsyQ one, if
+you wonder - a quick search gave me a hit in the first page of the results).
+Ideally I should get a proper replacement for asm68k that doesn't require me
+to rewrite all the code >_>
+
+There's a "build" shell script for *nix, put the executables in a /tools
+directory if you want to use it. Alternatively, you can read it to figure out
+what to do (shouldn't be hard, it's just seven lines, of which only the last
+three are relevant).
+
+Not much more to say. Bonus points if you can fix the crash when the player
+dies and there are no objects left on screen. The "game" is far from complete
+anyways so don't expect much. Enjoy!
+
+-----------------------------------------------------------------------------
+
+Oh, yeah, one last thing: the data/prog-z80.bin blob is the Echo sound engine
+(see http://echo.mdscene.net). You probably want to replace it with whatever
+is the newest version (I've put Echo 0.9 there, the newest as I upload this).

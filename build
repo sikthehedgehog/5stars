@@ -1,0 +1,9 @@
+#! /bin/sh
+
+asm68k() { wine ./tools/asm68k.exe /p $1, $2 ; }
+mdtiler() { ./tools/mdtiler $1 ; }
+slz() { ./tools/slz -c $1 $2 ; }
+
+mdtiler concept/graphics.txt
+slz concept/graphics.bin data/graphics.slz
+asm68k build.68k 5stars.bin

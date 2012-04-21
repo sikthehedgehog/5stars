@@ -1,0 +1,67 @@
+;****************************************************************************
+; 5 Stars
+; Copyright 2011-2012 Javier Degirolmo
+;
+; This file is part of 5 Stars.
+;
+; 5 Stars is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; 5 Stars is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with 5 Stars.  If not, see <http://www.gnu.org/licenses/>.
+;****************************************************************************
+
+;****************************************************************************
+; InitJoypad
+; Initializes the joypad
+;****************************************************************************
+
+InitJoypad:
+    move.b  #$40, ($A10009)             ; Initialize I/O ports
+    move.b  #$40, ($A10003)
+    move.w  #0, (RAM_JoyHold)           ; Reset joypad status
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; ReadJoypad
+; Updates the joypad status
+;----------------------------------------------------------------------------
+; breaks: d6, d7, a6
+;****************************************************************************
+
+ReadJoypad:
+    lea     ($A10003), a6               ; I/O port address
+    
+    move.b  #$40, (a6)                  ; Read D-pad, B and C
+    nop
+    nop
+    move.b  (a6), d7
+    
+    move.b  #$00, (a6)                  ; Read A and Start
+    nop
+    nop
+    move.b  (a6), d6
+    
+    and.b   #$3F, d7                    ; Put all bits together
+    and.b   #$30, d6
+    add.b   d6, d6
+    add.b   d6, d6
+    or.b    d6, d7
+    
+    not.b   d7                          ; Make button bits high-logic
+    
+    lea     (RAM_JoyHold), a6           ; Process input and generate "hold"
+    move.b  (a6), d6                      ; and "press" status values
+    move.b  d7, (a6)+
+    not.b   d6
+    and.b   d7, d6
+    move.b  d6, (a6)+
+    
+    rts                                 ; End of subroutine

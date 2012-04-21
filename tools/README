@@ -1,0 +1,7 @@
+Put your tools here.
+
+What the bundled build script expects (if you use that instead of your own):
+
+   - asm68k.exe (Windows executable)
+   - mdscene (Linux executable)
+   - slz (Linux executable)

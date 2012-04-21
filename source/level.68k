@@ -1,0 +1,71 @@
+;****************************************************************************
+; 5 Stars
+; Copyright 2011-2012 Javier Degirolmo
+;
+; This file is part of 5 Stars.
+;
+; 5 Stars is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; 5 Stars is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with 5 Stars.  If not, see <http://www.gnu.org/licenses/>.
+;****************************************************************************
+
+;****************************************************************************
+; InitLevel
+; Initializes the current level
+;----------------------------------------------------------------------------
+; breaks: all
+;****************************************************************************
+
+InitLevel:
+    move.l  #Level1Temp, (RAM_LevelPtr) ; Load pointer with level data
+    move.l  #0, (RAM_LevelTimer)        ; Reset level counter
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; UpdateLevel
+; Loads level objects as needed
+;----------------------------------------------------------------------------
+; breaks: all
+;****************************************************************************
+
+UpdateLevel:
+    move.l  (RAM_LevelTimer), d0        ; Retrieve time before next object
+    
+@Loop:
+    tst.l   d0                          ; Load next object?
+    bgt.s   @Done
+    
+    move.l  (RAM_LevelPtr), a6          ; Retrieve data for next object
+    move.w  (a6)+, d1                   ; Check if we're at the end of the
+    blt.s   @Done                         ; level already
+    
+    move.l  (RAM_ObjListEnd), a5        ; Create new object
+    move.w  d1, (a5)+
+    move.l  #352<<16, (a5)+
+    move.w  (a6)+, (a5)+
+    move.w  #0, (a5)+
+    move.l  #0, (a5)+
+    move.l  #0, (a5)+
+    move.l  a5, (RAM_ObjListEnd)
+    
+    swap    d0                          ; Retrieve delay until next object
+    add.w   (a6)+, d0
+    swap    d0
+    
+    move.l  a6, (RAM_LevelPtr)          ; Check if we need to load more
+    bra.s   @Loop                         ; objects yet
+    
+@Done:
+    sub.l   (RAM_AnimSpeed1x), d0       ; Reduce time before next object
+    move.l  d0, (RAM_LevelTimer)
+    
+    rts                                 ; End of subroutine

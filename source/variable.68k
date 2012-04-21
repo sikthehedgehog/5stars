@@ -1,0 +1,146 @@
+;****************************************************************************
+; 5 Stars
+; Copyright 2011-2012 Javier Degirolmo
+;
+; This file is part of 5 Stars.
+;
+; 5 Stars is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; 5 Stars is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with 5 Stars.  If not, see <http://www.gnu.org/licenses/>.
+;****************************************************************************
+
+;****************************************************************************
+; Global variables
+; These variables are common to all game modes
+;****************************************************************************
+
+    rsset $FF0000
+
+RAM_JoyHold:        rs.b 1          ; Buttons that are being held down
+RAM_JoyPress:       rs.b 1          ; Buttons that just got pressed
+
+RAM_VBlankFlag:     rs.b 1          ; Set when VBlank starts
+RAM_NumSprites:     rs.b 1          ; Number of sprites in the buffer
+RAM_SprBuffer:      rs.w 4*80       ; Sprite table buffer
+RAM_VDPBufEnd:      rs.l 1          ; Where the VDP command buffer ends
+RAM_VDPBuffer:      rs.w 32*7       ; VDP command buffer
+RAM_HscrBuffer:     rs.w 28         ; Hscroll buffer
+
+RAM_RandSeed:       rs.w 1          ; Seed for the random number generator
+
+RAM_AnimSpeed1x:    rs.l 1          ; Speed for 1 unit
+RAM_AnimSpeed2x:    rs.l 1          ; Speed for 2 units
+RAM_AnimSpeed3x:    rs.l 1          ; Speed for 3 units
+RAM_AnimSpeed8x:    rs.l 1          ; Speed for 8 units
+RAM_GlobalAnim:     rs.l 1          ; Global animation counter
+
+RAM_GlobalEnd:      rs.b 0          ; Where non-global variables start
+
+;****************************************************************************
+; Player data structure
+;****************************************************************************
+
+    rsreset
+PlayerX:            rs.l 1          ; X coordinate
+PlayerY:            rs.l 1          ; Y coordinate
+PlayerFlags:        rs.w 1          ; Status flags
+PlayerHookX:        rs.l 1          ; Hook X coordinate (relative)
+PlayerHookObj:      rs.l 1          ; Object which got hooked
+PlayerSize:         rs.b 0          ; Size of player data
+
+    rsreset
+PL_HOOKOUT:         rs.b 1          ; Set if hook has been shot
+PL_HOOKDIR:         rs.b 1          ; Where the hook is going
+PL_CAUGHT:          rs.b 1          ; The hook caught an enemy
+PL_DEAD:            rs.b 1          ; Set if the player died
+
+;****************************************************************************
+; Object data structure
+;****************************************************************************
+
+    rsreset
+ObjectType:         rs.w 1          ; Object type
+ObjectX:            rs.l 1          ; X coordinate
+ObjectY:            rs.l 1          ; Y coordinate
+ObjectParam1:       rs.l 1          ; First parameter
+ObjectParam2:       rs.l 1          ; Second parameter
+ObjectSize:         rs.b 0          ; Size of object data
+
+;****************************************************************************
+; Object types
+;****************************************************************************
+
+    rsreset
+OBJ_ENEMY_START:    rs.b 0          ; *** start of enemies list ***
+OBJ_FQSTRAIGHT:     rs.b 1          ; FQ-enemy, straight path
+OBJ_FQSINE1:        rs.b 1          ; FQ-enemy, sine pattern #1
+OBJ_FQSINE2:        rs.b 1          ; FQ-enemy, sine pattern #2
+OBJ_TSSTRAIGHT:     rs.b 1          ; TS-enemy, straight path
+OBJ_TSDOWNWARDS:    rs.b 1          ; TS-enemy, going downwards
+OBJ_TSUPWARDS:      rs.b 1          ; TS-enemy, going upwards
+OBJ_TSWALLDOWN:     rs.b 1          ; TS-enemy, walling downwards
+OBJ_TSWALLUP:       rs.b 1          ; TS-enemy, walling upwards
+OBJ_ENEMY_END:      rs.b 0          ; *** end of enemies list ***
+
+OBJ_BULLET_START:   rs.b 0          ; *** start of bullets list ***
+OBJ_STATICBULLET:   rs.b 1          ; Static bullet
+OBJ_BULLET_END:     rs.b 0          ; *** end of bullets list ***
+
+OBJ_CAUGHT_START:   rs.b 0          ; *** start of caught enemies list ***
+OBJ_FQCAUGHT:       rs.b 1          ; Caught FQ-enemy
+OBJ_TSCAUGHT:       rs.b 1          ; Caught TS-enemy
+OBJ_CAUGHT_END:     rs.b 0          ; *** end of caught enemies list ***
+
+OBJ_THROWN_START:   rs.b 0          ; *** start of thrown enemies list ***
+OBJ_FQTHROWN:       rs.b 1          ; Thrown FQ-enemy
+OBJ_TSTHROWN:       rs.b 1          ; Thrown TS-enemy
+OBJ_THROWN_END:     rs.b 0          ; *** end of thrown enemies list ***
+
+;****************************************************************************
+; Game variables
+; These variables are used in-game
+;****************************************************************************
+
+    rsset RAM_GlobalEnd
+RAM_FQEnemyAnim:    rs.w 1          ; For animating the FQ-enemies
+RAM_FQEnemyAnim2x:  rs.w 1          ; For animating the FQ-enemies (faster)
+RAM_BulletSprite:   rs.w 1          ; Sprite used by generic bullets
+RAM_BGOffsets:      rs.l 14         ; Scrolling of each row in the background
+RAM_BGSpeeds:       rs.l 14         ; Speeds of each row in the background
+
+RAM_LevelPtr:       rs.l 1          ; Pointer to next level data
+RAM_LevelTimer:     rs.l 1          ; Time before next level object
+RAM_GameStatus:     rs.w 1          ; Status flags
+
+RAM_Player:         rs.b PlayerSize ; Player data
+RAM_ObjListEnd:     rs.l 1          ; Pointer to last object
+RAM_ObjList:        rs.b 0          ; Where objects are stored
+
+;****************************************************************************
+; Flags for RAM_GameStatus
+;****************************************************************************
+
+    rsreset
+GS_PAUSED:          rs.b 1          ; Paused
+
+;****************************************************************************
+; VRAM tile IDs for each graphic
+;****************************************************************************
+
+    rsset 1
+
+VRAM_Ship:          rs.b 16         ; Standard ship
+VRAM_TSShipH:       rs.b 16         ; TS-enemy ship (horizontal)
+VRAM_TSShipV:       rs.b 16         ; TS-enemy ship (vertical)
+VRAM_Hook:          rs.b 9          ; Player hook
+VRAM_Square:        rs.b 1          ; Opaque filled square
+VRAM_BGStar:        rs.b 4          ; Background stars

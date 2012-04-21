@@ -1,0 +1,182 @@
+;****************************************************************************
+; 5 Stars
+; Copyright 2011-2012 Javier Degirolmo
+;
+; This file is part of 5 Stars.
+;
+; 5 Stars is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; 5 Stars is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with 5 Stars.  If not, see <http://www.gnu.org/licenses/>.
+;****************************************************************************
+
+;****************************************************************************
+; RunObjects
+; Run the game logic for all objects
+;----------------------------------------------------------------------------
+; breaks: all
+;****************************************************************************
+
+RunObjects:
+    lea     (RAM_ObjList), a0           ; Pointer to first object
+    move.l  (RAM_ObjListEnd), a1        ; Pointer to end of object list
+    lea     (@FuncList), a2             ; List of object subroutines
+    lea     (RAM_Player), a3            ; Pointer to player data
+    
+@Loop:
+    cmp.l   a1, a0                      ; Done?
+    bhs.s   @End
+    
+    move.w  ObjectType(a0), d7          ; Retrieve subroutine used to run the
+    add.w   d7, d7                        ; game logic for this object and
+    add.w   d7, d7                        ; run it
+    move.l  (a2,d7.w), a6
+    jsr     (a6)
+    
+    add.w   #ObjectSize, a0             ; Go for next object
+    bra.s   @Loop
+
+@End:    
+    rts                                 ; End of subroutine
+
+@FuncList:
+    dc.l    RunStraightEnemy            ; FQ-enemy, straight path
+    dc.l    RunSineEnemy1               ; FQ-enemy, sine pattern #1
+    dc.l    RunSineEnemy2               ; FQ-enemy, sine pattern #2
+    dc.l    RunStraightEnemy            ; TS-enemy, straight path
+    dc.l    RunDownwardsEnemy           ; TS-enemy, going downwards
+    dc.l    RunUpwardsEnemy             ; TS-enemy, going upwards
+    dc.l    RunDownWallingEnemy         ; TS-enemy, walling downwards
+    dc.l    RunUpWallingEnemy           ; TS-enemy, walling upwards
+    
+    dc.l    RunStaticBullet             ; Static bullet
+    
+    dc.l    RunCaughtEnemy              ; FQ-enemy, caught
+    dc.l    RunCaughtEnemy              ; TS-enemy, caught
+    
+    dc.l    RunThrownEnemy              ; FQ-enemy, thrown
+    dc.l    RunThrownEnemy              ; TS-enemy, thrown
+
+;****************************************************************************
+; DrawObjects
+; Draws all objects
+;----------------------------------------------------------------------------
+; breaks: all
+;****************************************************************************
+
+DrawObjects:
+    lea     (RAM_ObjList), a0           ; Pointer to first object
+    move.l  (RAM_ObjListEnd), a1        ; Pointer to end of object list
+    lea     (@FuncList), a2             ; List of object subroutines
+    lea     (RAM_Player), a3            ; Pointer to player data
+    
+@Loop:
+    cmp.l   a1, a0                      ; Done?
+    bhs.s   @End
+    
+    move.w  ObjectType(a0), d7          ; Retrieve the subroutine used to
+    add.w   d7, d7                        ; draw this object and run it
+    add.w   d7, d7
+    move.l  (a2,d7.w), a6
+    jsr     (a6)
+    
+    add.w   #ObjectSize, a0             ; Go for next object
+    bra.s   @Loop
+    
+@End:
+    rts                                 ; End of subroutine
+
+@FuncList:
+    dc.l    DrawFQEnemy                 ; FQ-enemy, straight path
+    dc.l    DrawFQEnemy                 ; FQ-enemy, sine pattern #1
+    dc.l    DrawFQEnemy                 ; FQ-enemy, sine pattern #2
+    dc.l    DrawTSEnemyLeft             ; TS-enemy, straight path
+    dc.l    DrawTSEnemyDown             ; TS-enemy, going downwards
+    dc.l    DrawTSEnemyUp               ; TS-enemy, going upwards
+    dc.l    DrawTSEnemyDown             ; TS-enemy, walling downwards
+    dc.l    DrawTSEnemyUp               ; TS-enemy, walling upwards
+    
+    dc.l    DrawBullet                  ; Static bullet
+    
+    dc.l    DrawCaughtFQEnemy           ; FQ-enemy, caught
+    dc.l    DrawCaughtTSEnemy           ; TS-enemy, caught
+    
+    dc.l    DrawCaughtFQEnemy           ; FQ-enemy, thrown
+    dc.l    DrawCaughtTSEnemy           ; TS-enemy, thrown
+
+;****************************************************************************
+; SpawnObject
+; Spawns a new child object
+;----------------------------------------------------------------------------
+; input a0.l .... Object data
+; input a1.l .... End of object list
+; output a6.l ... Pointer to new object
+;****************************************************************************
+
+SpawnObject:
+    move.l  a1, a6                      ; Retrieve pointer to new object
+    
+    move.w  #0, (a1)+                   ; Create new object with sensible
+    move.l  ObjectX(a0), (a1)+            ; default values
+    move.l  ObjectY(a0), (a1)+
+    move.l  #0, (a1)+
+    move.l  #0, (a1)+
+    
+    move.l  a1, (RAM_ObjListEnd)        ; Update object list end
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; KillObject
+; Kills another object
+;----------------------------------------------------------------------------
+; input a0.l ... Object data
+; input a1.l ... End of object list
+; input a3.l ... Player data
+; input a6.l ... Object to kill
+; breaks: a6
+;****************************************************************************
+
+KillObject:
+   move.l   a0, -(sp)                   ; I'm too lazy to program this code
+   move.l   a6, a0                        ; so instead we'll just make the
+   bsr      SuicideObject                 ; other object "suicide"
+   move.l   (sp)+, a0
+   
+   rts                                  ; End of subroutine
+
+;****************************************************************************
+; SuicideObject
+; Kills the currently running object
+;----------------------------------------------------------------------------
+; input a0.l ... Object data
+; input a1.l ... End of object list
+; input a3.l ... Player data
+; notes: use BRA, not BSR
+;****************************************************************************
+
+SuicideObject:
+    move.l  PlayerHookObj(a3), a6       ; The last object gets shifted. If
+    add.w   #ObjectSize, a6               ; this happened to be the object
+    cmp.l   a6, a1                        ; the hook was keeping track of, we
+    bne.s   @NoHookChange                 ; need to make sure it keeps
+    move.l  a0, PlayerHookObj(a3)         ; tracking this one in its new
+@NoHookChange:                            ; location now
+    
+    add.l   #ObjectSize, a0             ; Copy last object into the place of
+    move.l  -(a1), -(a0)                  ; the current one. This has the
+    move.l  -(a1), -(a0)                  ; side-effect of updating the end
+    move.l  -(a1), -(a0)                  ; of the object list
+    move.l  -(a1), -(a0)
+    move.w  -(a1), -(a0)
+    
+    move.l  a1, (RAM_ObjListEnd)        ; Store new object list end pointer
+    sub.w   #ObjectSize, a0             ; Make sure last object isn't skipped
+    rts                                 ; Kill object for real now

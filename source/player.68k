@@ -1,0 +1,260 @@
+;****************************************************************************
+; 5 Stars
+; Copyright 2011-2012 Javier Degirolmo
+;
+; This file is part of 5 Stars.
+;
+; 5 Stars is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; 5 Stars is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with 5 Stars.  If not, see <http://www.gnu.org/licenses/>.
+;****************************************************************************
+
+;****************************************************************************
+; InitPlayer
+; Initializes the player
+;----------------------------------------------------------------------------
+; breaks: a6
+;****************************************************************************
+
+InitPlayer:
+    lea     (RAM_Player), a6            ; Where player data is stored
+    
+    move.l  #80<<16, (a6)+              ; Initial X coordinate
+    move.l  #112<<16, (a6)+             ; Initial Y coordinate
+    move.w  #%000, (a6)+                ; Initial status
+    move.l  #0, (a6)+                   ; Hook not released
+    move.l  #0, (a6)+                   ; Currently hooked object
+    
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; RunPlayer
+; Does the player behaviour
+;----------------------------------------------------------------------------
+; breaks: all
+;****************************************************************************
+
+RunPlayer:
+    lea     (RAM_Player), a0            ; Where player data is stored
+    
+    move.l  PlayerX(a0), d7             ; Retrieve some common variables from
+    move.l  PlayerY(a0), d6               ; memory for performance purposes
+    move.w  PlayerFlags(a0), d5
+    
+    btst.l  #PL_DEAD, d5                ; If we're dead, run the dead code
+    beq.s   @NotDead                      ; instead
+    bra     RunDeadPlayer
+@NotDead:
+    
+    move.b  (RAM_JoyHold), d0           ; Retrieve joypad input
+    move.l  (RAM_AnimSpeed3x), d1       ; Speed at which we move
+    
+    btst.l  #0, d0                      ; Move up?
+    beq.s   @NoMoveUp
+    sub.l   d1, d6
+@NoMoveUp:
+    btst.l  #1, d0                      ; Move down?
+    beq.s   @NoMoveDown
+    add.l   d1, d6
+@NoMoveDown:
+    btst.l  #2, d0                      ; Move left?
+    beq.s   @NoMoveLeft
+    sub.l   d1, d7
+@NoMoveLeft:
+    btst.l  #3, d0                      ; Move right?
+    beq.s   @NoMoveRight
+    add.l   d1, d7
+@NoMoveRight:
+    
+    cmp.l   #16<<16, d6                 ; Going too far up?
+    bge.s   @NotTooUp
+    move.l  #16<<16, d6
+@NotTooUp:
+    cmp.l   #208<<16, d6                ; Going too far down?
+    ble.s   @NotTooDown
+    move.l  #208<<16, d6
+@NotTooDown:
+    cmp.l   #16<<16, d7                 ; Going too far left?
+    bge.s   @NotTooLeft
+    move.l  #16<<16, d7
+@NotTooLeft:
+    cmp.l   #304<<16, d7                ; Going too far right?
+    ble.s   @NotTooRight
+    move.l  #304<<16, d7
+@NotTooRight:
+    
+    btst.l  #PL_HOOKOUT, d5             ; Check if hook has been shot already
+    beq.s   @NotShooting
+    
+    move.l  (RAM_AnimSpeed8x), d1       ; Determine hook direction
+    btst.l  #PL_HOOKDIR, d5
+    beq.s   @HookForwards
+    neg.l   d1
+@HookForwards:
+    
+    move.l  PlayerHookX(a0), d0         ; Move hook
+    add.l   d1, d0
+    cmp.l   #96<<16, d0
+    blt.s   @NoHookReturn
+    bset.l  #PL_HOOKDIR, d5
+@NoHookReturn:
+    
+    tst.l   d0                          ; Check if the hook has returned
+    bgt.s   @NotDoneShooting
+    moveq   #0, d0
+    bclr.l  #PL_HOOKOUT, d5
+@NotDoneShooting:
+    
+    move.l  d0, PlayerHookX(a0)         ; Store hook position
+    bra.s   @DontShoot
+@NotShooting:
+    
+    move.b  (RAM_JoyPress), d0          ; Shoot hook?
+    and.b   #$70, d0
+    beq.s   @DontShoot
+    
+    btst.l  #PL_CAUGHT, d5              ; Did we catch an enemy? (if so,
+    beq.s   @NoEnemyShoot                 ; shoot it instead)
+    
+    move.l  PlayerHookObj(a0), a6       ; Throw enemy!
+    move.w  ObjectType(a6), d7
+    sub.w   #OBJ_FQCAUGHT, d7
+    add.w   d7, d7
+    lea     (@ThrowList), a5
+    move.w  (a5,d7.w), ObjectType(a6)
+    bclr.l  #PL_CAUGHT, d5
+    bra.s   @DontShoot
+    
+@NoEnemyShoot:
+    bset.l  #PL_HOOKOUT, d5             ; Shoot hook!
+    bclr.l  #PL_HOOKDIR, d5
+@DontShoot:
+
+    move.l  d7, PlayerX(a0)             ; Store common variables back into
+    move.l  d6, PlayerY(a0)               ; memory again
+    move.w  d5, PlayerFlags(a0)
+    
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; When throwing away caught enemies, this list is used to determine into
+; what objects get converted
+;****************************************************************************
+
+@ThrowList:
+    dc.w    OBJ_FQTHROWN                ; FQ-enemy
+    dc.w    OBJ_TSTHROWN                ; TS-enemy
+
+;****************************************************************************
+; RunDeadPlayer
+; Game logic for the player when it's dead
+;----------------------------------------------------------------------------
+; breaks: all
+;****************************************************************************
+
+RunDeadPlayer:
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; DrawPlayer
+; Draws the player
+;----------------------------------------------------------------------------
+; breaks: all
+;****************************************************************************
+
+DrawPlayer:
+    lea     (RAM_Player), a0            ; Where player data is stored
+    
+    btst.b  #PL_DEAD, PlayerFlags+1(a0) ; Don't show player if dead!
+    bne.s   @Dead
+    
+    move.w  PlayerX(a0), d0             ; Get player coordinates on screen
+    move.w  PlayerY(a0), d1
+    add.w   #$80-16, d0
+    add.w   #$80-16, d1
+    
+    moveq   #VRAM_Ship, d2              ; Show player sprite
+    moveq   #%1111, d3
+    bsr     AddSprite
+    
+@Dead:
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; DrawHook
+; Draws the player hook (if needed)
+;----------------------------------------------------------------------------
+; breaks: all
+;****************************************************************************
+
+DrawHook:
+    lea     (RAM_Player), a0            ; Where player data is stored
+    
+    move.w  PlayerFlags(a0), d0         ; Check if hook has been shot
+    btst.l  #PL_HOOKOUT, d0
+    beq.s   @End
+    
+    move.w  PlayerX(a0), d0             ; Get hook coordinates on screen
+    move.w  PlayerY(a0), d1
+    add.w   PlayerHookX(a0), d0
+    add.w   #$80-12+16, d0
+    add.w   #$80-12, d1
+    
+    moveq   #VRAM_Hook, d2              ; Show hook sprite
+    moveq   #%1010, d3
+    bsr     AddSprite
+    
+    move.w  PlayerX(a0), d4             ; Draw hook chain
+    add.w   #$80+8, d4
+    sub.w   #16, d0
+    addq.w  #8, d1
+    moveq   #VRAM_Square, d2
+    moveq   #%0000, d3
+@DrawChains:
+    cmp.w   d4, d0
+    ble.s   @NoMoreChains
+    bsr     AddSprite
+    sub.w   #16, d0
+    bra.s   @DrawChains
+@NoMoreChains:
+    
+@End:
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; KillPlayer
+; Kills the player
+;----------------------------------------------------------------------------
+; input a3.l ... Player data
+; breaks: d7, a6
+;****************************************************************************
+
+KillPlayer:
+    move.w  PlayerFlags(a3), d7         ; Retrieve current player status
+    
+    btst.l  #PL_DEAD, d7                ; Erm, yeah...
+    beq.s   @NotDeadYet
+    rts
+@NotDeadYet:
+    
+    bset.l  #PL_DEAD, d7                ; Kill player! :(
+    
+    bclr.l  #PL_HOOKOUT, d7             ; No hook shot!
+    btst.l  #PL_CAUGHT, d7              ; If we had caught an enemy, destroy
+    beq.s   @NotHooking                   ; it since we can't keep it anymore
+    move.l  PlayerHookObj(a3), a6
+    bsr     KillObject
+@NotHooking:
+    
+    move.w  d7, PlayerFlags(a3)         ; Update new player status
+    rts                                 ; End of subroutine
+

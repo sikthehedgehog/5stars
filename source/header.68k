@@ -1,0 +1,73 @@
+;****************************************************************************
+; 5 Stars
+; Copyright 2011-2012 Javier Degirolmo
+;
+; This file is part of 5 Stars.
+;
+; 5 Stars is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; 5 Stars is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with 5 Stars.  If not, see <http://www.gnu.org/licenses/>.
+;****************************************************************************
+
+;****************************************************************************
+; 68000 vectors
+;****************************************************************************
+
+    dc.l    $1000000, EntryPoint, Crash, Crash
+    dc.l    Crash, Crash, Crash, Crash
+    dc.l    Crash, Crash, Crash, Crash
+    dc.l    Crash, Crash, Crash, Crash
+
+    dc.l    Crash, Crash, Crash, Crash
+    dc.l    Crash, Crash, Crash, Crash
+    dc.l    Crash, Crash, Crash, Crash
+    dc.l    Crash, Crash, VBIHandler, Crash
+
+    dc.l    Crash, Crash, Crash, Crash
+    dc.l    Crash, Crash, Crash, Crash
+    dc.l    Crash, Crash, Crash, Crash
+    dc.l    Crash, Crash, Crash, Crash
+
+    dc.l    Crash, Crash, Crash, Crash
+    dc.l    Crash, Crash, Crash, Crash
+    dc.l    Crash, Crash, Crash, Crash
+    dc.l    Crash, Crash, Crash, Crash
+
+;****************************************************************************
+; Mega Drive header
+;****************************************************************************
+
+    dc.b    "SEGA MEGA DRIVE "          ; Target platform
+    dc.b    "(C) SIK 2011.JUL"          ; Copyright
+    dc.b    "5 STARS"                   ; Domestic name
+    dcb.b   $150-*, $20                   ; [padding]
+    dc.b    "5 STARS"                   ; Overseas name
+    dcb.b   $180-*, $20                   ; [padding]
+    dc.b    "GM ????????-00"            ; Serial number
+    dc.w    $0000                       ; Checksum
+    dc.b    "J"                         ; Device support
+    dcb.b   $1A0-*, $20                   ; [padding]
+    dc.l    $000000, $3FFFFF            ; ROM address range
+    dc.l    $FF0000, $FFFFFF            ; RAM address range
+    dcb.b   12, $20                     ; External memory
+    dcb.b   12, $20                     ; Modem support
+    dcb.b   $1F0-*, $20                 ; [reserved]
+    dc.b    "JUE"                       ; Region support
+    dcb.b   $200-*, $20                 ; [reserved]
+
+;****************************************************************************
+; Crash
+; Where we go if the program crashes...
+;****************************************************************************
+
+Crash:
+    bra.s   *

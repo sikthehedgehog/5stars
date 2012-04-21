@@ -1,0 +1,523 @@
+;****************************************************************************
+; 5 Stars
+; Copyright 2011-2012 Javier Degirolmo
+;
+; This file is part of 5 Stars.
+;
+; 5 Stars is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; 5 Stars is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with 5 Stars.  If not, see <http://www.gnu.org/licenses/>.
+;****************************************************************************
+
+;****************************************************************************
+; RunStraightEnemy
+; Game logic for enemies with a straight path
+;----------------------------------------------------------------------------
+; input a0.l ... Object data
+; input a3.l ... Player data
+; breaks: all but a0-a3
+;****************************************************************************
+
+RunStraightEnemy:
+    move.l  ObjectX(a0), d0             ; Get object coordinates
+    
+    sub.l   (RAM_AnimSpeed2x), d0       ; Move left
+    cmp.l   #-32<<16, d0                ; Are we off-screen already?
+    bge.s   @NotOffScreen
+    bra     SuicideObject
+@NotOffScreen:
+    
+    move.l  d0, ObjectX(a0)             ; Store new object coordinates
+    
+    bsr     DoEnemyStuff                ; Do enemy crap
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; RunDownwardsEnemy
+; Game logic for enemies going downwards
+;----------------------------------------------------------------------------
+; input a0.l ... Object data
+; input a3.l ... Player data
+; breaks: all but a0-a3
+;****************************************************************************
+
+RunDownwardsEnemy:
+    move.l  ObjectX(a0), d0             ; Get object coordinates
+    move.l  ObjectY(a0), d1
+    
+    sub.l   (RAM_AnimSpeed2x), d0       ; Move left
+    add.l   (RAM_AnimSpeed2x), d1       ; Move downwards
+    
+    cmp.l   #-32<<16, d0                ; Are we off-screen already?
+    blt.s   @OffScreen
+    cmp.l   #256<<16, d1
+    blt.s   @NotOffScreen
+@OffScreen:
+    bra     SuicideObject
+@NotOffScreen:
+    
+    move.l  d0, ObjectX(a0)             ; Store new object coordinates
+    move.l  d1, ObjectY(a0)
+    
+    bsr     DoEnemyStuff                ; Do enemy crap
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; RunUpwardsEnemy
+; Game logic for enemies going upwards
+;----------------------------------------------------------------------------
+; input a0.l ... Object data
+; input a3.l ... Player data
+; breaks: all but a0-a3
+;****************************************************************************
+
+RunUpwardsEnemy:
+    move.l  ObjectX(a0), d0             ; Get object coordinates
+    move.l  ObjectY(a0), d1
+    
+    sub.l   (RAM_AnimSpeed2x), d0       ; Move left
+    sub.l   (RAM_AnimSpeed2x), d1       ; Move upwards
+    
+    cmp.l   #-32<<16, d0                ; Are we off-screen already?
+    blt.s   @OffScreen
+    cmp.l   #-32<<16, d1
+    bgt.s   @NotOffScreen
+@OffScreen:
+    bra     SuicideObject
+@NotOffScreen:
+    
+    move.l  d0, ObjectX(a0)             ; Store new object coordinates
+    move.l  d1, ObjectY(a0)
+    
+    bsr     DoEnemyStuff                ; Do enemy crap
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; Run*WallingEnemy
+; Game logic for walling enemies
+;----------------------------------------------------------------------------
+; input a0.l ... Object data
+; input a3.l ... Player data
+; breaks: all but a0-a3
+;****************************************************************************
+
+RunDownWallingEnemy:
+    bsr     RunWallingEnemy             ; Do the walling
+    bra     RunDownwardsEnemy           ; Rest of behaviour is the same as
+                                          ; the downwards moving enemy
+
+;----------------------------------------------------------------------------
+
+RunUpWallingEnemy:
+    bsr     RunWallingEnemy             ; Do the walling
+    bra     RunUpwardsEnemy             ; Rest of behaviour is the same as
+                                          ; the upwards moving enemy
+
+;----------------------------------------------------------------------------
+
+RunWallingEnemy:
+    move.l  ObjectParam1(a0), d0        ; Get walling counter
+    
+    add.l   (RAM_AnimSpeed1x), d0       ; Time to create a new wall piece?
+    cmp.l   #8<<16, d0
+    blt.s   @DontWall
+    
+    sub.l   #8<<16, d0                  ; Spawn a bullet here
+    bsr     SpawnObject
+    move.w  #OBJ_STATICBULLET, ObjectType(a6)
+@DontWall:
+
+    move.l  d0, ObjectParam1(a0)        ; Update walling counter
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; RunSineEnemy*
+; Game logic for enemies that follow a sine pattern
+;----------------------------------------------------------------------------
+; input a0.l ... Object data
+; input a3.l ... Player data
+; breaks: all but a0-a3
+;****************************************************************************
+
+RunSineEnemy1:
+    move.w  ObjectX(a0), d0             ; Determine Y coordinate based on the
+    add.w   d0, d0                        ; X coordinate, following a sine
+    and.w   #$1FE, d0                     ; wave pattern as we move
+    lea     (Sines), a6
+    move.w  (a6,d0.w), d0
+    asr.w   #2, d0
+    add.w   #112, d0
+    move.w  d0, ObjectY(a0)
+    
+    bra     RunStraightEnemy            ; Rest of behaviour is the same as
+                                          ; enemies with a straight path
+
+;----------------------------------------------------------------------------
+
+RunSineEnemy2:
+    move.w  ObjectX(a0), d0             ; Determine Y coordinate based on the
+    add.w   d0, d0                        ; X coordinate, following a sine
+    and.w   #$1FE, d0                     ; wave pattern as we move
+    lea     (Sines), a6
+    move.w  (a6,d0.w), d0
+    asr.w   #2, d0
+    neg.w   d0
+    add.w   #112, d0
+    move.w  d0, ObjectY(a0)
+    
+    bra     RunStraightEnemy            ; Rest of behaviour is the same as
+                                          ; enemies with a straight path
+
+;****************************************************************************
+; RunCaughtEnemy
+; Game logic for enemies that have been caught
+;----------------------------------------------------------------------------
+; input a0.l ... Object data
+; input a3.l ... Player data
+; breaks: all but a0-a3
+;****************************************************************************
+
+RunCaughtEnemy:
+    move.l  PlayerX(a3), d0             ; Calculate new X coordinate
+    add.l   PlayerHookX(a3), d0
+    add.l   #16<<16, d0
+    move.l  d0, ObjectX(a0)
+    
+    move.l  PlayerY(a3), ObjectY(a0)    ; Calculate new Y coorindate
+    
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; RunThrownEnemy
+; Game logic for enemies that have been thrown
+;----------------------------------------------------------------------------
+; input a0.l ... Object data
+; input a3.l ... Player data
+; breaks: all but a0-a3
+;****************************************************************************
+
+RunThrownEnemy:
+    move.l  ObjectX(a0), d0             ; Push enemy forwards
+    add.l   (RAM_AnimSpeed8x), d0
+    move.l  d0, ObjectX(a0)
+    
+    cmp.l   #352<<16, d0                ; Did we go off-screen?
+    ble.s   @NotGone
+    bra     SuicideObject
+@NotGone:
+    
+    lea     (RAM_ObjList), a6           ; Scan other objects to see if we
+@Loop:                                    ; collide against an enemy
+    cmp.l   a1, a6
+    beq.s   @End
+    
+    cmp.w   #OBJ_ENEMY_END, ObjectType(a6) ; Check if this is an enemy...
+    bge.s   @Skip
+    
+    move.w  ObjectX(a0), d0             ; Check if we're colliding with the
+    move.w  ObjectX(a6), d1               ; enemy then
+    sub.w   #12, d0                     ; (horizontal check)
+    add.w   #12, d1
+    cmp.w   d1, d0
+    bgt.s   @Skip
+    add.w   #24, d0
+    sub.w   #24, d1
+    cmp.w   d1, d0
+    blt.s   @Skip
+    
+    move.w  ObjectY(a0), d0             ; (vertical check)
+    move.w  ObjectY(a6), d1
+    sub.w   #12, d0
+    add.w   #12, d1
+    cmp.w   d1, d0
+    bgt.s   @Skip
+    add.w   #24, d0
+    sub.w   #24, d1
+    cmp.w   d1, d0
+    blt.s   @Skip
+    
+    bsr     KillObject                  ; Destroy enemy
+    bra     SuicideObject               ; Self-destruct
+    
+@Skip:
+    add.w   #ObjectSize, a6             ; Go for next object
+    bra.s   @Loop
+    
+@End:
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; DrawFQEnemy
+; Draws an FQ-enemy
+;----------------------------------------------------------------------------
+; input a0.l ... Object data
+; input a3.l ... Player data
+; breaks: all but a0-a3
+;****************************************************************************
+
+DrawFQEnemy:
+    move.w  ObjectX(a0), d4             ; Get coordinates for core
+    move.w  ObjectY(a0), d5
+    add.w   #$80-4, d4
+    add.w   #$80-4, d5
+    
+    move.w  d4, d0                      ; Draw core
+    move.w  d5, d1
+    move.w  #$2000|VRAM_Square, d2
+    moveq   #%0000, d3
+    bsr     AddSprite
+    
+    move.w  d4, d0                      ; Draw square going from top-left to
+    move.w  d5, d1                        ; bottom-left
+    sub.w   #12, d0
+    sub.w   #12, d1
+    add.w   (RAM_FQEnemyAnim), d1
+    bsr     AddSprite
+    
+    move.w  d4, d0                      ; Draw square going from bottom-left
+    move.w  d5, d1                        ; to bottom-right
+    sub.w   #12, d0
+    add.w   #12, d1
+    add.w   (RAM_FQEnemyAnim), d0
+    bsr     AddSprite
+    
+    move.w  d4, d0                      ; Draw square going from bottom-right
+    move.w  d5, d1                        ; to top-right
+    add.w   #12, d0
+    add.w   #12, d1
+    sub.w   (RAM_FQEnemyAnim), d1
+    bsr     AddSprite
+    
+    move.w  d4, d0                      ; Draw square going from top-right to
+    move.w  d5, d1                        ; top-left
+    add.w   #12, d0
+    sub.w   #12, d1
+    sub.w   (RAM_FQEnemyAnim), d0
+    bsr     AddSprite
+    
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; DrawCaughtFQEnemy
+; Draws a caught FQ-enemy
+;----------------------------------------------------------------------------
+; input a0.l ... Object data
+; input a3.l ... Player data
+; breaks: all but a0-a3
+;****************************************************************************
+
+DrawCaughtFQEnemy:
+    move.w  ObjectX(a0), d4             ; Get coordinates for core
+    move.w  ObjectY(a0), d5
+    add.w   #$80-4, d4
+    add.w   #$80-4, d5
+    
+    move.w  d4, d0                      ; Draw core
+    move.w  d5, d1
+    moveq   #VRAM_Square, d2
+    moveq   #%0000, d3
+    bsr     AddSprite
+    
+    move.w  d4, d0                      ; Draw square going from top-left to
+    move.w  d5, d1                        ; bottom-left
+    sub.w   #12, d0
+    sub.w   #12, d1
+    add.w   (RAM_FQEnemyAnim2x), d1
+    bsr     AddSprite
+    
+    move.w  d4, d0                      ; Draw square going from bottom-left
+    move.w  d5, d1                        ; to bottom-right
+    sub.w   #12, d0
+    add.w   #12, d1
+    add.w   (RAM_FQEnemyAnim2x), d0
+    bsr     AddSprite
+    
+    move.w  d4, d0                      ; Draw square going from bottom-right
+    move.w  d5, d1                        ; to top-right
+    add.w   #12, d0
+    add.w   #12, d1
+    sub.w   (RAM_FQEnemyAnim2x), d1
+    bsr     AddSprite
+    
+    move.w  d4, d0                      ; Draw square going from top-right to
+    move.w  d5, d1                        ; top-left
+    add.w   #12, d0
+    sub.w   #12, d1
+    sub.w   (RAM_FQEnemyAnim2x), d0
+    bsr     AddSprite
+    
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; DrawTSEnemyLeft
+; Draws a TS-enemy going left
+;----------------------------------------------------------------------------
+; input a0.l ... Object data
+; input a3.l ... Player data
+; breaks: all but a0-a3
+;****************************************************************************
+
+DrawTSEnemyLeft:
+    move.w  ObjectX(a0), d0             ; Get enemy coordinates on screen
+    move.w  ObjectY(a0), d1
+    add.w   #$80-16, d0
+    add.w   #$80-16, d1
+    
+    move.w  #$2800|VRAM_TSShipH, d2     ; Show enemy sprite
+    moveq   #%1111, d3
+    bsr     AddSprite
+    
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; DrawTSEnemyDown
+; Draws a TS-enemy going down
+;----------------------------------------------------------------------------
+; input a0.l ... Object data
+; input a3.l ... Player data
+; breaks: all but a0-a3
+;****************************************************************************
+
+DrawTSEnemyDown:
+    move.w  ObjectX(a0), d0             ; Get enemy coordinates on screen
+    move.w  ObjectY(a0), d1
+    add.w   #$80-16, d0
+    add.w   #$80-16, d1
+    
+    move.w  #$2000|VRAM_TSShipV, d2     ; Show enemy sprite
+    moveq   #%1111, d3
+    bsr     AddSprite
+    
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; DrawTSEnemyUp
+; Draws a TS-enemy going up
+;----------------------------------------------------------------------------
+; input a0.l ... Object data
+; input a3.l ... Player data
+; breaks: all but a0-a3
+;****************************************************************************
+
+DrawTSEnemyUp:
+    move.w  ObjectX(a0), d0             ; Get enemy coordinates on screen
+    move.w  ObjectY(a0), d1
+    add.w   #$80-16, d0
+    add.w   #$80-16, d1
+    
+    move.w  #$3000|VRAM_TSShipV, d2     ; Show enemy sprite
+    moveq   #%1111, d3
+    bsr     AddSprite
+    
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; DrawCaughtTSEnemy
+; Draws a caught TS-enemy
+;----------------------------------------------------------------------------
+; input a0.l ... Object data
+; input a3.l ... Player data
+; breaks: all but a0-a3
+;****************************************************************************
+
+DrawCaughtTSEnemy:
+    move.w  ObjectX(a0), d0             ; Get enemy coordinates on screen
+    move.w  ObjectY(a0), d1
+    add.w   #$80-16, d0
+    add.w   #$80-16, d1
+    
+    move.w  (RAM_GlobalAnim), d2        ; Determine which sprite to show
+    and.w   #3<<1, d2
+    lea     (@Angles), a6
+    move.w  (a6,d2.w), d2
+    
+    moveq   #%1111, d3                  ; Show enemy sprite
+    bsr     AddSprite
+    
+    rts                                 ; End of subroutine
+
+@Angles:
+    dc.w    $1000|VRAM_TSShipV
+    dc.w    $0000|VRAM_TSShipH
+    dc.w    $0000|VRAM_TSShipV
+    dc.w    $0800|VRAM_TSShipH
+
+;****************************************************************************
+; DoEnemyStuff
+; Common stuff done by all enemies
+;****************************************************************************
+
+DoEnemyStuff:
+    bsr     CatchEnemy                  ; Check if hook catches us
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; CatchEnemy
+; Checks if an enemy has been "caught"
+;----------------------------------------------------------------------------
+; input a0.l ... Object data
+; input a3.l ... Player data
+; breaks: d6, d7, a6
+;****************************************************************************
+
+CatchEnemy:
+    move.w  PlayerFlags(a3), d7         ; Check if the player can catch us
+    btst.l  #PL_HOOKOUT, d7
+    beq.s   @NotCaught
+    btst.l  #PL_CAUGHT, d7
+    bne.s   @NotCaught
+    
+    move.w  ObjectY(a0), d7             ; Did we collide with the hook?
+    move.w  PlayerY(a3), d6             ; (vertical check)
+    add.w   #12, d6
+    sub.w   #12, d7
+    cmp.w   d6, d7
+    bgt.s   @NotCaught
+    sub.w   #24, d6
+    add.w   #24, d7
+    cmp.w   d6, d7
+    blt.s   @NotCaught
+    
+    move.w  ObjectX(a0), d7             ; (horizontal check)
+    move.w  PlayerX(a3), d6
+    add.w   PlayerHookX(a3), d6
+    add.w   #16+12, d6
+    sub.w   #12, d7
+    cmp.w   d6, d7
+    bgt.s   @NotCaught
+    sub.w   #24, d6
+    add.w   #24, d7
+    cmp.w   d6, d7
+    blt.s   @NotCaught
+    
+    move.l  a0, PlayerHookObj(a3)       ; Tell hook which object was caught
+    move.w  PlayerFlags(a3), d7         ; Mark hook as having caught an enemy
+    bset.l  #PL_CAUGHT, d7
+    move.w  d7, PlayerFlags(a3)
+    
+    move.w  ObjectType(a0), d7          ; Retrieve current object type
+    add.w   d7, d7                      ; Look into conversion list to
+    lea     (@List), a6                   ; determine new object type
+    move.w  (a6,d7.w), ObjectType(a0)
+    
+@NotCaught:
+    rts                                 ; End of subroutine
+
+@List:
+    dc.w    OBJ_FQCAUGHT                ; FQ-enemy, straight path
+    dc.w    OBJ_FQCAUGHT                ; FQ-enemy, sine pattern #1
+    dc.w    OBJ_FQCAUGHT                ; FQ-enemy, sine pattern #2
+    dc.w    OBJ_TSCAUGHT                ; TS-enemy, straight path
+    dc.w    OBJ_TSCAUGHT                ; TS-enemy, going downwards
+    dc.w    OBJ_TSCAUGHT                ; TS-enemy, going upwards
+    dc.w    OBJ_TSCAUGHT                ; TS-enemy, walling downwards
+    dc.w    OBJ_TSCAUGHT                ; TS-enemy, walling upwards

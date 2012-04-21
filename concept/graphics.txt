@@ -1,0 +1,22 @@
+output concept/graphics.bin
+
+input concept/ship.png
+layout sprite
+tiles 0 0 4 4
+
+input concept/ts-ship.png
+layout sprite
+tiles 0 0 4 4
+tiles 4 0 4 4
+
+input concept/hook.png
+layout sprite
+tiles 0 0 3 3
+
+input concept/square.png
+layout sprite
+tiles 0 0 1 1
+
+input concept/star.png
+layout tilemap
+tiles 0 0 2 2

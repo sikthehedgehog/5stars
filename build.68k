@@ -1,0 +1,26 @@
+;****************************************************************************
+
+    include "source/header.68k"         ; ROM header
+    include "source/variable.68k"       ; Program variables
+    include "source/video.68k"          ; Video routines
+    include "source/joypad.68k"         ; Joypad reading
+    include "source/slz.68k"            ; SLZ decompression
+    include "source/main.68k"           ; Core routines
+    
+    include "source/game.68k"           ; Main loop of the in-game mode
+    include "source/player.68k"         ; Player behaviour
+    include "source/objects.68k"        ; Objects manager
+    include "source/level.68k"          ; Parses level data
+    include "source/enemies.68k"        ; Enemy objects
+    include "source/bullets.68k"        ; Bullet objects
+    
+Echo_ProgFile equs "data/prog-z80.bin"  ; Echo (sound engine)
+    include "source/echo.68k"
+    
+    include "data/level1.68k"           ; First level
+    
+    include "data/math.68k"             ; Look-up tables
+    include "data/graphics.68k"         ; Game graphics
+    include "data/sound.68k"            ; Game sounds
+
+;****************************************************************************

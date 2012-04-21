@@ -1,0 +1,206 @@
+;****************************************************************************
+; 5 Stars
+; Copyright 2011-2012 Javier Degirolmo
+;
+; This file is part of 5 Stars.
+;
+; 5 Stars is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; 5 Stars is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with 5 Stars.  If not, see <http://www.gnu.org/licenses/>.
+;****************************************************************************
+
+;****************************************************************************
+; InGame
+; Main loop for the in-game mode
+;****************************************************************************
+
+InGame:
+    move.w  #$8B02, ($C00004)           ; Turn on per-tile hscroll
+    bsr     InitStarBG                  ; Initialize background parallax
+    bsr     DrawStarBG                  ; Draw background
+    bsr     UpdateStarBG                ; Do parallax for the first frame
+    
+    bsr     InitPlayer                  ; Initialize player
+    bsr     InitLevel                   ; Initialize level
+    move.l  #RAM_ObjList, (RAM_ObjListEnd) ; Clear all objects
+    
+    move.w  #%0, (RAM_GameStatus)       ; Reset game status
+    
+    bsr     NextFrame                   ; Wait until frame starts
+    move.w  #$8174, ($C00004)           ; Enable display
+
+;****************************************************************************
+
+@MainLoop:
+    move.w  (RAM_GameStatus), d0        ; Get current game status
+    
+    btst.b  #7, (RAM_JoyPress)          ; Pause game?
+    beq.s   @NotPausing
+    bchg.l  #GS_PAUSED, d0
+@NotPausing:
+    
+    move.w  d0, (RAM_GameStatus)        ; Store new status
+    
+    btst.l  #GS_PAUSED, d0              ; Don't do anything while paused
+    bne.s   @Paused                       ; except drawing
+    
+    move.l  (RAM_GlobalAnim), d7        ; Update global animation counter
+    add.l   (RAM_AnimSpeed1x), d7
+    move.l  d7, (RAM_GlobalAnim)
+
+    swap    d7                          ; Turn global animation counter into
+                                          ; an integer value
+    
+    moveq   #VRAM_Square, d6            ; Determine sprite to use for
+    btst.l  #1, d7                        ; generic bullets
+    beq.s   @NoBulletBlink
+    bset.l  #13, d6
+@NoBulletBlink:
+    move.w  d6, (RAM_BulletSprite)
+    
+    move.w  d7, d6                      ; Update offset for animating the
+    and.w   #$000F, d6                    ; squares of FQ-enemies
+    move.w  d6, d5
+    lsr.w   #1, d5
+    add.w   d5, d6
+    move.w  d6, (RAM_FQEnemyAnim)
+    
+    move.w  d7, d6                      ; Update offset for animating the
+    add.w   d6, d6                        ; squares of caught FQ-enemies
+    and.w   #$000F, d6
+    move.w  d6, d5
+    lsr.w   #1, d5
+    add.w   d5, d6
+    move.w  d6, (RAM_FQEnemyAnim2x)
+    
+    bsr     RunPlayer                   ; Run game logic
+    bsr     RunObjects
+    bsr     UpdateLevel
+    
+    bsr     UpdateStarBG                ; Update background parallax
+@Paused:
+    
+    bsr     ClearSprites                ; Draw everything
+    bsr     DrawPlayer
+    bsr     DrawObjects
+    bsr     DrawHook
+    
+    bsr     UpdateSprites               ; Go for next frame
+    bsr     NextFrame
+    bra     @MainLoop
+
+;****************************************************************************
+; InitStarBG
+; Initializes the scrolling of the star background
+;----------------------------------------------------------------------------
+; breaks: all
+;****************************************************************************
+
+InitStarBG:
+    lea     (RAM_BGOffsets), a6         ; Where parallax positions are stored
+    
+    moveq   #14-1, d6                   ; Fill scroll positions with random
+    moveq   #0, d5                        ; values so stars aren't aligned
+@Loop:
+    bsr     Rand
+    move.w  d7, (a6)+
+    move.w  d5, (a6)+
+    dbf     d6, @Loop
+    
+    move.l  (RAM_AnimSpeed1x), d0       ; Speeds used to animate the stars
+    move.l  (RAM_AnimSpeed2x), d1
+    move.l  (RAM_AnimSpeed3x), d2
+    asr.l   #1, d0
+    asr.l   #1, d1
+    asr.l   #1, d2
+    
+    rept    3                           ; Store speeds for each star row
+    move.l  d0, (a6)+
+    move.l  d1, (a6)+
+    move.l  d0, (a6)+
+    move.l  d2, (a6)+
+    endr
+    move.l  d0, (a6)+
+    move.l  d1, (a6)+
+    
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; DrawStarBG
+; Draws the star background
+;----------------------------------------------------------------------------
+; breaks: all
+;****************************************************************************
+
+DrawStarBG:
+    moveq   #0, d0                      ; Patterns used when drawing
+    move.l  #(VRAM_BGStar+0)<<16|(VRAM_BGStar+1), d1
+    move.l  #(VRAM_BGStar+2)<<16|(VRAM_BGStar+3), d2
+    
+    SetVRAMAddr $E000, ($C00004)        ; Draw all stars in the background
+    lea     ($C00000), a6
+    moveq   #28/2-1, d7
+@Loop:
+    move.l  d1, (a6)                    ; Draw top of the star row
+    rept    15
+    move.l  d0, (a6)
+    endr
+    move.l  d1, (a6)
+    rept    15
+    move.l  d0, (a6)
+    endr
+    
+    move.l  d2, (a6)                    ; Draw bottom of the star row
+    rept    15
+    move.l  d0, (a6)
+    endr
+    move.l  d2, (a6)
+    rept    15
+    move.l  d0, (a6)
+    endr
+    
+    dbf     d7, @Loop                   ; Go for next star row
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; UpdateStarBG
+; Updates the star background parallax
+;----------------------------------------------------------------------------
+; breaks: all
+;****************************************************************************
+
+UpdateStarBG:
+    move.l  (RAM_AnimSpeed1x), d0       ; Retrieve parallax speeds
+    move.l  (RAM_AnimSpeed2x), d1
+    move.l  (RAM_AnimSpeed3x), d2
+    
+    lea     (RAM_BGOffsets), a6         ; Where parallax positions are stored
+    lea     (RAM_HscrBuffer), a5        ; Where hscroll values are stored
+    lea     (RAM_BGSpeeds), a4          ; Speeds for each parallax row
+    
+    moveq   #14-1, d7                   ; Update the position of each star
+@Loop:                                    ; row (also the hscroll buffer)
+    move.l  (a6), d6
+    sub.l   (a4)+, d6
+    move.l  d6, (a6)+
+    swap    d6
+    move.w  d6, (a5)+
+    move.w  d6, (a5)+
+    dbf     d7, @Loop
+    
+    move.l  (RAM_VDPBufEnd), a6         ; Issue a DMA transfer to copy the
+    move.w  #$8F20, (a6)+                 ; hscroll buffer into VRAM
+    DMA2VRAM RAM_HscrBuffer, $F802, 28, a6
+    move.w  #$8F02, (a6)+
+    move.l  a6, (RAM_VDPBufEnd)
+    
+    rts                                 ; End of subroutine

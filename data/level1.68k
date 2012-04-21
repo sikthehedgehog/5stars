@@ -1,0 +1,229 @@
+;****************************************************************************
+; 5 Stars
+; Copyright 2011-2012 Javier Degirolmo
+;
+; This file is part of 5 Stars.
+;
+; 5 Stars is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; 5 Stars is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with 5 Stars.  If not, see <http://www.gnu.org/licenses/>.
+;****************************************************************************
+
+;****************************************************************************
+; Level1
+; Data for the first level
+;****************************************************************************
+
+Level1:
+
+;****************************************************************************
+; Initial wave of FQ-enemies
+;****************************************************************************
+
+Level1Temp:
+    dc.w    OBJ_FQSTRAIGHT, 40, 30
+    dc.w    OBJ_FQSTRAIGHT, 184, 30
+    dc.w    OBJ_FQSTRAIGHT, 88, 30
+    dc.w    OBJ_FQSTRAIGHT, 136, 30
+    dc.w    OBJ_FQSTRAIGHT, 40, 30
+    dc.w    OBJ_FQSTRAIGHT, 184, 210
+
+;****************************************************************************
+; First sine wave of FQ-enemies
+;****************************************************************************
+
+    dc.w    OBJ_FQSINE1, 0, 30
+    dc.w    OBJ_FQSINE2, 0, 30
+    dc.w    OBJ_FQSINE1, 0, 30
+    dc.w    OBJ_FQSINE2, 0, 30
+    dc.w    OBJ_FQSINE1, 0, 30
+    dc.w    OBJ_FQSINE2, 0, 30
+    dc.w    OBJ_FQSINE1, 0, 30
+    dc.w    OBJ_FQSINE2, 0, 210
+
+;****************************************************************************
+; TS-enemy vertical waves
+;****************************************************************************
+
+    dc.w    OBJ_TSDOWNWARDS, -32, 30
+    dc.w    OBJ_TSUPWARDS, 256, 30
+    dc.w    OBJ_TSDOWNWARDS, -32, 30
+    dc.w    OBJ_TSUPWARDS, 256, 30
+    dc.w    OBJ_TSDOWNWARDS, -32, 30
+    dc.w    OBJ_TSUPWARDS, 256, 30
+    dc.w    OBJ_TSDOWNWARDS, -32, 30
+    dc.w    OBJ_TSUPWARDS, 256, 180
+
+;****************************************************************************
+; TS-enemy three-groups waves
+;****************************************************************************
+
+    dc.w    OBJ_TSSTRAIGHT, 56, 30
+    dc.w    OBJ_TSSTRAIGHT, 32, 0
+    dc.w    OBJ_TSSTRAIGHT, 80, 30
+    
+    dc.w    OBJ_TSSTRAIGHT, 168, 30
+    dc.w    OBJ_TSSTRAIGHT, 144, 0
+    dc.w    OBJ_TSSTRAIGHT, 192, 30
+
+    dc.w    OBJ_TSSTRAIGHT, 56, 30
+    dc.w    OBJ_TSSTRAIGHT, 32, 0
+    dc.w    OBJ_TSSTRAIGHT, 80, 30
+    
+    dc.w    OBJ_TSSTRAIGHT, 168, 30
+    dc.w    OBJ_TSSTRAIGHT, 144, 0
+    dc.w    OBJ_TSSTRAIGHT, 192, 210
+
+;****************************************************************************
+; Second sine wave of FQ-enemies
+;****************************************************************************
+
+    dc.w    OBJ_FQSINE1, 0, 30
+    dc.w    OBJ_FQSINE2, 0, 30
+    dc.w    OBJ_FQSINE1, 0, 30
+    dc.w    OBJ_FQSINE2, 0, 30
+    dc.w    OBJ_FQSINE1, 0, 30
+    dc.w    OBJ_FQSINE2, 0, 30
+    dc.w    OBJ_FQSINE1, 0, 30
+    dc.w    OBJ_FQSINE2, 0, 210
+
+;****************************************************************************
+; Walling TS-enemies
+;****************************************************************************
+
+    dc.w    OBJ_TSWALLDOWN, -32, 60
+    dc.w    OBJ_TSWALLUP, 256, 60
+    dc.w    OBJ_TSWALLDOWN, -32, 60
+    dc.w    OBJ_TSWALLUP, 256, 60
+    dc.w    OBJ_TSWALLDOWN, -32, 60
+    dc.w    OBJ_TSWALLUP, 256, 210
+
+;****************************************************************************
+; Double sine wave of FQ-enemies
+;****************************************************************************
+
+    dc.w    OBJ_FQSINE1, 0, 0
+    dc.w    OBJ_FQSINE2, 0, 30
+    dc.w    OBJ_FQSINE1, 0, 0
+    dc.w    OBJ_FQSINE2, 0, 30
+    dc.w    OBJ_FQSINE1, 0, 0
+    dc.w    OBJ_FQSINE2, 0, 30
+    dc.w    OBJ_FQSINE1, 0, 0
+    dc.w    OBJ_FQSINE2, 0, 30
+    dc.w    OBJ_FQSINE1, 0, 0
+    dc.w    OBJ_FQSINE2, 0, 210
+
+;****************************************************************************
+; More TS-enemies
+;****************************************************************************
+
+    dc.w    OBJ_TSSTRAIGHT, 168, 30
+    dc.w    OBJ_TSSTRAIGHT, 144, 0
+    dc.w    OBJ_TSSTRAIGHT, 192, 30
+
+    dc.w    OBJ_TSSTRAIGHT, 56, 30
+    dc.w    OBJ_TSSTRAIGHT, 32, 0
+    dc.w    OBJ_TSSTRAIGHT, 80, 30
+    
+    dc.w    OBJ_TSSTRAIGHT, 168, 30
+    dc.w    OBJ_TSSTRAIGHT, 144, 0
+    dc.w    OBJ_TSSTRAIGHT, 192, 30
+
+    dc.w    OBJ_TSSTRAIGHT, 56, 30
+    dc.w    OBJ_TSSTRAIGHT, 32, 0
+    dc.w    OBJ_TSSTRAIGHT, 80, 210
+
+;****************************************************************************
+; Wave of vertical TS-enemies from both sides
+;****************************************************************************
+    
+    dc.w    OBJ_TSDOWNWARDS, -32, 0
+    dc.w    OBJ_TSUPWARDS, 256, 30
+    dc.w    OBJ_TSDOWNWARDS, -32, 0
+    dc.w    OBJ_TSUPWARDS, 256, 30
+    dc.w    OBJ_TSDOWNWARDS, -32, 0
+    dc.w    OBJ_TSUPWARDS, 256, 30
+    dc.w    OBJ_TSDOWNWARDS, -32, 0
+    dc.w    OBJ_TSUPWARDS, 256, 30
+    dc.w    OBJ_TSDOWNWARDS, -32, 0
+    dc.w    OBJ_TSUPWARDS, 256, 30
+    dc.w    OBJ_TSDOWNWARDS, -32, 0
+    dc.w    OBJ_TSUPWARDS, 256, 30
+    dc.w    OBJ_TSDOWNWARDS, -32, 0
+    dc.w    OBJ_TSUPWARDS, 256, 30
+    dc.w    OBJ_TSDOWNWARDS, -32, 0
+    dc.w    OBJ_TSUPWARDS, 256, 180
+
+;****************************************************************************
+; More walling TS-enemies with sine wave FQ-enemies
+;****************************************************************************
+
+    dc.w    OBJ_TSWALLDOWN, -32, 30
+    dc.w    OBJ_FQSINE2, 0, 30
+    dc.w    OBJ_TSWALLUP, 256, 30
+    dc.w    OBJ_FQSINE1, 0, 30
+    dc.w    OBJ_TSWALLDOWN, -32, 30
+    dc.w    OBJ_FQSINE2, 0, 30
+    dc.w    OBJ_TSWALLUP, 256, 30
+    dc.w    OBJ_FQSINE1, 0, 30
+    dc.w    OBJ_TSWALLDOWN, -32, 30
+    dc.w    OBJ_FQSINE2, 0, 30
+    dc.w    OBJ_TSWALLUP, 256, 210
+
+;****************************************************************************
+; Double straight path enemies
+;****************************************************************************
+
+    dc.w    OBJ_TSSTRAIGHT, 32, 0
+    dc.w    OBJ_TSSTRAIGHT, 192, 30
+    dc.w    OBJ_FQSTRAIGHT, 32, 0
+    dc.w    OBJ_FQSTRAIGHT, 192, 30
+    dc.w    OBJ_TSSTRAIGHT, 32, 0
+    dc.w    OBJ_TSSTRAIGHT, 192, 30
+    dc.w    OBJ_FQSTRAIGHT, 32, 0
+    dc.w    OBJ_FQSTRAIGHT, 192, 30
+    dc.w    OBJ_TSSTRAIGHT, 32, 0
+    dc.w    OBJ_TSSTRAIGHT, 192, 210
+
+;****************************************************************************
+; Third sine wave of FQ-enemies
+;****************************************************************************
+
+    dc.w    OBJ_FQSINE1, 0, 30
+    dc.w    OBJ_FQSINE2, 0, 30
+    dc.w    OBJ_FQSINE1, 0, 30
+    dc.w    OBJ_FQSINE2, 0, 30
+    dc.w    OBJ_FQSINE1, 0, 30
+    dc.w    OBJ_FQSINE2, 0, 30
+    dc.w    OBJ_FQSINE1, 0, 30
+    dc.w    OBJ_FQSINE2, 0, 210
+
+;****************************************************************************
+; Another wave of straight FQ-enemies
+;****************************************************************************
+
+    dc.w    OBJ_FQSTRAIGHT, 80, 0
+    dc.w    OBJ_FQSTRAIGHT, 144, 30
+    dc.w    OBJ_FQSTRAIGHT, 48, 0
+    dc.w    OBJ_FQSTRAIGHT, 184, 30
+    dc.w    OBJ_FQSTRAIGHT, 80, 0
+    dc.w    OBJ_FQSTRAIGHT, 144, 30
+    dc.w    OBJ_FQSTRAIGHT, 40, 0
+    dc.w    OBJ_FQSTRAIGHT, 184, 30
+    dc.w    OBJ_FQSTRAIGHT, 80, 0
+    dc.w    OBJ_FQSTRAIGHT, 144, 210
+
+;****************************************************************************
+; End of level
+;****************************************************************************
+
+    dc.w    -1

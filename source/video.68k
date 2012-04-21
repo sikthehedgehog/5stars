@@ -1,0 +1,240 @@
+;****************************************************************************
+; 5 Stars
+; Copyright 2011-2012 Javier Degirolmo
+;
+; This file is part of 5 Stars.
+;
+; 5 Stars is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; 5 Stars is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with 5 Stars.  If not, see <http://www.gnu.org/licenses/>.
+;****************************************************************************
+
+;****************************************************************************
+; Set*Addr
+; Macros for making a VDP command to write to a given address
+;----------------------------------------------------------------------------
+; input addr .... Address to access
+; input where ... Where to store command
+;****************************************************************************
+
+SetVRAMAddr macro addr, where
+    move.l  #$40000000|((\addr)&$3FFF)<<16|(\addr)>>14, \where
+    endm
+
+SetCRAMAddr macro addr, where
+    move.l  #$C0000000|((\addr)&$3FFF)<<16|(\addr)>>14, \where
+    endm
+
+SetVSRAMAddr macro addr, where
+    move.l  #$40000010|((\addr)&$3FFF)<<16|(\addr)>>14, \where
+    endm
+
+;****************************************************************************
+; DMA2VRAM
+; Issues a DMA command to VRAM (all src, dest, len are fixed)
+;----------------------------------------------------------------------------
+; input src .... Source address
+; input dest ... Destination address
+; input len .... Length in words
+; input reg .... Register used to write to the VDP buffer
+;****************************************************************************
+
+DMA2VRAM macro src, dest, len, reg
+    move.l  #$94009300|((len)&$FF00)<<8|((len)&$FF), (\reg)+
+    move.l  #$96009500|((src)&$1FE00)<<7|((src)&$1FE)>>1, (\reg)+
+    move.w  #$9700|((src)>>17&$7F), (\reg)+
+    move.l  #$40000080|((dest)&$3FFF)<<16|(dest)>>14, (\reg)+
+    endm
+
+;****************************************************************************
+; DMA2VRAM_L
+; Issues a DMA command to VRAM (src, dest are fixed, len is variable)
+;----------------------------------------------------------------------------
+; input src .... Source address
+; input dest ... Destination address
+; input len .... Register with length in words
+; input reg .... Register used to write to the VDP buffer
+;****************************************************************************
+
+DMA2VRAM_L macro src, dest, len, reg
+    move.l  #$94009300, (\reg)+
+    movep.w \len, -3(\reg)
+    move.l  #$96009500|((src)&$1FE00)<<7|((src)&$1FE)>>1, (\reg)+
+    move.w  #$9700|((src)>>17&$7F), (\reg)+
+    move.l  #$40000080|((dest)&$3FFF)<<16|(dest)>>14, (\reg)+
+    endm
+
+;****************************************************************************
+; InitVideo
+; Initializes the video hardware
+;----------------------------------------------------------------------------
+; breaks: d7, a5, a6
+;****************************************************************************
+
+InitVideo:
+    lea     ($C00004), a6               ; VDP control port address
+    lea     ($C00000), a5               ; VDP data port address
+    
+    move.w  #$8004, (a6)                ; No HBI, no HV latch
+    move.w  #$8134, (a6)                ; No display, VBI, DMA OK, V28
+    move.w  #$8230, (a6)                ; Plane A: $C000
+    move.w  #$8407, (a6)                ; Plane B: $E000
+    move.w  #$8578, (a6)                ; Sprites: $F000
+    move.w  #$8700, (a6)                ; BG color: palette 0, index 0
+    move.w  #$8B00, (a6)                ; No IRQ2, full scrolling
+    move.w  #$8C81, (a6)                ; H40, no S/H, no interlace
+    move.w  #$8D3E, (a6)                ; Hscroll: $F800
+    move.w  #$8F02, (a6)                ; Autoincrement: 2 bytes
+    move.w  #$9001, (a6)                ; Tilemap size: 64x32
+    move.w  #$9100, (a6)                ; Hide window plane
+    move.w  #$9200, (a6)                ;   "     "     "
+    
+    moveq   #0, d7                      ; Reset tile #0 (always blank)
+    SetVRAMAddr $0000, (a6)
+    move.l  d7, (a5)
+    move.l  d7, (a5)
+    move.l  d7, (a5)
+    move.l  d7, (a5)
+    move.l  d7, (a5)
+    move.l  d7, (a5)
+    move.l  d7, (a5)
+    move.l  d7, (a5)
+    
+    SetVRAMAddr $F000, (a6)             ; Clear sprite cache
+    move.l  d7, (a5)
+    move.l  d7, (a5)
+    
+    SetVSRAMAddr $0000, (a6)            ; Clear VSRAM
+    move.l  d7, (a5)
+    
+    move.b  #0, (RAM_NumSprites)        ; Reset buffers
+    lea     (RAM_VDPBuffer), a6
+    move.l  a6, -4(a6)
+    
+    move.w  #$2000, sr                  ; Enable IRQ6 (VBlank)
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; VSync
+; Waits until the next frame starts
+;****************************************************************************
+
+VSync:
+    lea     (RAM_VBlankFlag), a6        ; Where the VBlank flag is stored
+    move.b  #0, (a6)                    ; Clear VBlank flag
+    
+@Loop:                                  ; Wait until the VBlank flag gets set
+    tst.b   (a6)                          ; (which means VBlank just started)
+    beq.s   @Loop
+    
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; VBIHandler
+; Handler for the VBlank interrupt
+;****************************************************************************
+
+VBIHandler:
+    move.b  #1, (RAM_VBlankFlag)        ; Set VBlank flag
+    rte                                 ; End of handler
+
+;****************************************************************************
+; FlushVDPBuffer
+; Flushes the VDP buffer command (executing anything in it)
+;****************************************************************************
+
+FlushVDPBuffer:
+    lea     (RAM_VDPBuffer), a6         ; Where VDP buffer starts
+    move.l  (RAM_VDPBufEnd), a5         ; Where VDP buffer ends
+    lea     ($C00004), a4               ; VDP control port address
+    
+@Loop:                                  ; Send all words in the buffer to the
+    cmp.l   a5, a6                        ; VDP control port
+    beq.s   @End
+    move.w  (a6)+, (a4)
+    bra.s   @Loop
+    
+@End:
+    lea     (RAM_VDPBuffer), a6         ; Reset buffer
+    move.l  a6, -4(a6)
+    
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; ClearSprites
+; Clears the sprite buffer
+;****************************************************************************
+
+ClearSprites:
+    move.b  #0, (RAM_NumSprites)        ; Reset sprite count
+    move.l  #0, (RAM_SprBuffer)         ; Clear first sprite, since it will
+    move.l  #0, (RAM_SprBuffer+4)         ; be always shown on screen
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; AddSprite
+; Adds a sprite to the sprite buffer
+;----------------------------------------------------------------------------
+; input d0.w ... X coordinate (add $80)
+; input d1.w ... Y coordinate (add $80)
+; input d2.w ... First tile
+; input d3.b ... Sprite size
+;****************************************************************************
+
+AddSprite:
+    lea     (RAM_SprBuffer), a6         ; Where the sprite buffer starts
+    
+    move.b  (RAM_NumSprites), d7        ; Get number of sprites
+    beq.s   @First                      ; First sprite?
+    cmp.b   #80, d7                     ; Buffer full?
+    beq.s   @Full
+    
+    moveq   #0, d6                      ; Get address of new sprite entry
+    move.w  d7, d6
+    lsl.w   #3, d6
+    lea     (a6,d6.w), a6
+    
+    move.b  d7, -5(a6)                  ; Update link of last sprite
+    
+@First:
+    move.w  d1, (a6)+                   ; Put sprite entry into buffer
+    move.b  d3, (a6)+
+    move.b  #0, (a6)+
+    move.w  d2, (a6)+
+    move.w  d0, (a6)+
+    
+    addq.b  #1, d7                      ; Update sprite count
+    move.b  d7, (RAM_NumSprites)
+    
+@Full:
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; UpdateSprites
+; Copies the sprite buffer into VRAM
+;****************************************************************************
+
+UpdateSprites:
+    moveq   #0, d7                      ; Calculate number of sprites to load
+    move.b  (RAM_NumSprites), d7          ; (make sure to load at least one
+    beq.s   @NotEmpty                     ; sprite)
+    addq.b  #1, d7
+@NotEmpty:
+    
+    add.w   d7, d7                      ; Turn sprites into words
+    add.w   d7, d7
+    
+    move.l  (RAM_VDPBufEnd), a6         ; Issue DMA transfer
+    DMA2VRAM_L RAM_SprBuffer, $F000, d7, a6
+    move.l  a6, (RAM_VDPBufEnd)
+    
+    rts                                 ; End of subroutine

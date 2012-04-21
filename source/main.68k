@@ -1,0 +1,135 @@
+;****************************************************************************
+; 5 Stars
+; Copyright 2011-2012 Javier Degirolmo
+;
+; This file is part of 5 Stars.
+;
+; 5 Stars is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; 5 Stars is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with 5 Stars.  If not, see <http://www.gnu.org/licenses/>.
+;****************************************************************************
+
+;****************************************************************************
+; EntryPoint
+; Where the program starts
+;****************************************************************************
+
+EntryPoint:
+    move.w  #$2700, sr                  ; Disable all IRQs
+    
+    move.b  ($A10001), d0               ; Disable TMSS
+    and.b   #$0F, d0
+    beq.s   @NoTMSS
+    move.l  #"SEGA", ($A14000)
+@NoTMSS:
+    
+    bsr     InitJoypad                  ; Initialize hardware
+    bsr     InitVideo
+    
+    lea     ($C00004), a6               ; Load palette
+    lea     ($C00000), a5
+    SetCRAMAddr $0000, (a6)
+    move.l  #$000000E0, (a5)
+    move.l  #$0AAA0E66, (a5)
+    move.w  #$0444, (a5)
+    SetCRAMAddr $0020, (a6)
+    move.l  #$0000066E, (a5)
+    move.l  #$066E066E, (a5)
+    
+    lea     (Tiles), a6                 ; Upload graphics into VRAM
+    lea     (RAM_GlobalEnd), a5
+    bsr     DecompressSlz
+    move.l  (RAM_VDPBufEnd), a6
+    DMA2VRAM RAM_GlobalEnd, $0020, 62*$10, a6
+    move.l  a6, (RAM_VDPBufEnd)
+    bsr     FlushVDPBuffer
+    
+    lea     (RAM_AnimSpeed1x), a1       ; Fill in speed values based on
+    lea     (@NTSCTable), a0              ; whether we're in NTSC or PAL
+    btst.b  #0, ($C00004+1)               ; (used to play at the same speed
+    beq.s   @UseNTSCTable                 ; regardless of refresh rate)
+    lea     (@PALTable), a0
+@UseNTSCTable:
+    move.l  (a0)+, (a1)+
+    move.l  (a0)+, (a1)+
+    move.l  (a0)+, (a1)+
+    move.l  (a0)+, (a1)+
+    
+    move.l  #0, (RAM_GlobalAnim)        ; Reset global animation counter
+    
+    move.w  ($C00008), d0               ; Initialize random number generator
+    moveq   #64/4-1, d7
+    lea     ($FF0246), a6
+@RandInit:
+    add.l   (a6)+, d0
+    add.l   (a6)+, d0
+    add.l   (a6)+, d0
+    add.l   (a6)+, d0
+    dbf     d7, @RandInit
+    add.w   ($C00008), d0
+    move.w  d0, (RAM_RandSeed)
+    
+    bra     InGame                      ; Start game!
+
+;****************************************************************************
+; Speed look-up tables
+; Used to determine the speeds for NTSC and PAL
+;****************************************************************************
+
+@NTSCFactor equ 65536
+@PALFactor equ 78643
+
+@NTSCTable:
+    dc.l    @NTSCFactor                 ; 1x
+    dc.l    @NTSCFactor*2               ; 2x
+    dc.l    @NTSCFactor*3               ; 3x
+    dc.l    @NTSCFactor*8               ; 8x
+
+@PALTable:
+    dc.l    @PALFactor                  ; 1x
+    dc.l    @PALFactor*2                ; 2x
+    dc.l    @PALFactor*3                ; 3x
+    dc.l    @PALFactor*8                ; 8x
+
+;****************************************************************************
+; NextFrame
+; Gets the game ready for the next frame
+;----------------------------------------------------------------------------
+; breaks: d5, d6, d7, a4, a5, a6
+;****************************************************************************
+
+NextFrame:
+    bsr     VSync                       ; Wait until next frame starts
+    bsr     FlushVDPBuffer              ; Flush all issued VDP commands
+    bsr     ReadJoypad                  ; Update joypad status
+    
+    rts                                 ; End of subroutine
+
+;****************************************************************************
+; Rand
+; Generates a random number
+;----------------------------------------------------------------------------
+; output d7.w ... Random number
+;****************************************************************************
+
+Rand:
+    move.w  (RAM_RandSeed), d7          ; Retrieve current seed
+    
+    ror.b   #3, d7                      ; Do some weird shenanigans with the
+    rol.w   #5, d7                        ; seed value
+    rol.b   #3, d7
+    eor.w   #$E2B9, d7
+    add.w   ($C00008), d7
+    
+    move.w  d7, (RAM_RandSeed)          ; Store new seed
+    rts                                 ; End of subroutine
+
